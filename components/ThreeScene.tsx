@@ -27,29 +27,33 @@ const ThreeScene: React.FC = () => {
 
     const group = new THREE.Group();
 
-    // Emerald Geometric Ring
+    // Emerald Geometric Ring - Reduced opacity for subtle effect
     const ringGeo = new THREE.TorusGeometry(2, 0.005, 16, 100);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0x10b981,
       transparent: true,
-      opacity: 0.6
+      opacity: 0.2
     });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     group.add(ring);
 
-    // Decorative inner glow ring
+    // Decorative inner glow ring - Even more subtle
     const innerRingGeo = new THREE.TorusGeometry(1.98, 0.002, 16, 100);
     const innerRingMat = new THREE.MeshBasicMaterial({
       color: 0x10b981,
       transparent: true,
-      opacity: 0.35
+      opacity: 0.1
     });
     const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
     group.add(innerRing);
 
     // High-Contrast Hands
     const handMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const emeraldHandMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+    const subtleEmeraldMat = new THREE.MeshBasicMaterial({
+      color: 0x10b981,
+      transparent: true,
+      opacity: 0.5
+    });
 
     const hourHandGeo = new THREE.BoxGeometry(0.04, 1.2, 0.04);
     const hourHand = new THREE.Mesh(hourHandGeo, handMat);
@@ -59,7 +63,7 @@ const ThreeScene: React.FC = () => {
     group.add(hourPivot);
 
     const minuteHandGeo = new THREE.BoxGeometry(0.02, 1.8, 0.02);
-    const minuteHand = new THREE.Mesh(minuteHandGeo, emeraldHandMat);
+    const minuteHand = new THREE.Mesh(minuteHandGeo, subtleEmeraldMat);
     minuteHand.position.y = 0.9;
     const minutePivot = new THREE.Group();
     minutePivot.add(minuteHand);
@@ -130,7 +134,7 @@ const ThreeScene: React.FC = () => {
       hourHandGeo.dispose();
       minuteHandGeo.dispose();
       handMat.dispose();
-      emeraldHandMat.dispose();
+      subtleEmeraldMat.dispose();
 
       renderer.dispose();
       if (containerRef.current && renderer.domElement) {
