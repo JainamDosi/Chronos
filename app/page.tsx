@@ -83,7 +83,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white selection:bg-emerald-500 selection:text-black font-sans">
       {/* Universal Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-[100] px-8 py-8 flex justify-between items-center pointer-events-none">
+      <nav className="fixed top-0 left-0 right-0 z-[100] px-8 py-4 flex justify-between items-center bg-black/60 backdrop-blur-xl border-b border-white/[0.05] transition-all duration-300 shadow-2xl">
         <div
           onClick={() => setShowDashboard(false)}
           className="flex items-center gap-4 pointer-events-auto group cursor-pointer"
@@ -96,12 +96,12 @@ export default function Home() {
 
         <div className="hidden md:flex items-center gap-12 pointer-events-auto">
           {!showDashboard ? (
-            <a href="#features" className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-colors">Features</a>
+            <a href="#features" className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500 hover:text-white transition-colors">Features</a>
           ) : (
             <>
-              <a href="#grid" className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-colors">Log</a>
-              <a href="#telemetry" className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-colors">Stats</a>
-              <a href="#audit" className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-600 hover:text-white transition-colors">Analysis</a>
+              <a href="#grid" className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500 hover:text-white transition-colors">Log</a>
+              <a href="#telemetry" className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500 hover:text-white transition-colors">Stats</a>
+              <a href="#audit" className="text-[10px] font-mono font-bold uppercase tracking-[0.3em] text-zinc-500 hover:text-white transition-colors">Analysis</a>
             </>
           )}
         </div>
@@ -188,7 +188,7 @@ export default function Home() {
           </div>
           <div className="space-y-4">
             <p className="text-zinc-600 text-[10px] font-mono uppercase tracking-[0.6em]">Chronos App • Private focus tracker</p>
-            <p className="text-zinc-800 text-[9px] font-mono tracking-widest">SECURELY SAVED • 2024</p>
+            <p className="text-zinc-800 text-[9px] font-mono tracking-widest">SECURELY SAVED • 2026</p>
           </div>
         </div>
       </footer>
