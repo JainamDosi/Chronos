@@ -3,9 +3,10 @@
 import React, { useMemo } from 'react';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area
+  AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
 import { WeeklyData, SlotType, TimeSlot } from '../types';
+import { HOURS } from '../constants';
 
 interface AnalyticsDashboardProps {
   data: WeeklyData;
@@ -13,91 +14,182 @@ interface AnalyticsDashboardProps {
 }
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ data, currentWeekDates }) => {
-  const chartData = useMemo(() => {
+  // 1. Daily Volume Data (Productive vs Unproductive)
+  const volumeData = useMemo(() => {
     return currentWeekDates.map(date => {
       const dayData = data[date] || {};
       const hours = Object.values(dayData) as TimeSlot[];
-      const productive = hours.filter(h => h.type === SlotType.PRODUCTIVE).length;
-      const unproductive = hours.filter(h => h.type === SlotType.UNPRODUCTIVE).length;
-
-      const d = new Date(date);
       return {
-        name: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
-        date: date,
-        productive,
-        unproductive
+        name: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+        productive: hours.filter(h => h.type === SlotType.PRODUCTIVE).length,
+        unproductive: hours.filter(h => h.type === SlotType.UNPRODUCTIVE).length,
       };
     });
   }, [data, currentWeekDates]);
 
+  // 2. Hourly Distribution (Peak Focus Hours) - Aggregated across all days in view
+  const hourlyData = useMemo(() => {
+    return HOURS.map(hour => {
+      let prodCount = 0;
+      currentWeekDates.forEach(date => {
+        if (data[date]?.[hour]?.type === SlotType.PRODUCTIVE) prodCount++;
+      });
+      return {
+        hour: `${hour}:00`,
+        value: prodCount
+      };
+    });
+  }, [data, currentWeekDates]);
+
+  // 3. Focus Quality Trend (Average Rating per day)
+  const qualityData = useMemo(() => {
+    return currentWeekDates.map(date => {
+      const dayData = data[date] || {};
+      const productiveLogs = Object.values(dayData).filter(h => h.type === SlotType.PRODUCTIVE && h.rating);
+      const avgRating = productiveLogs.length > 0
+        ? productiveLogs.reduce((acc, h) => acc + (h.rating || 0), 0) / productiveLogs.length
+        : 0;
+
+      return {
+        name: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+        quality: Number(avgRating.toFixed(1))
+      };
+    });
+  }, [data, currentWeekDates]);
+
+  // 4. Overall Composition (Sleep vs Focused vs Idle)
+  const compositionData = useMemo(() => {
+    let focus = 0, waste = 0, sleep = 0;
+    currentWeekDates.forEach(date => {
+      Object.values(data[date] || {}).forEach(h => {
+        if (h.type === SlotType.PRODUCTIVE) focus++;
+        else if (h.type === SlotType.UNPRODUCTIVE) waste++;
+        else if (h.type === SlotType.SLEEP) sleep++;
+      });
+    });
+    return [
+      { name: 'Focused', value: focus, color: '#10b981' },
+      { name: 'Sleep', value: sleep, color: '#6366f1' },
+      { name: 'Idle', value: waste, color: '#f43f5e' }
+    ].filter(d => d.value > 0);
+  }, [data, currentWeekDates]);
+
   const stats = useMemo(() => {
-    const prod = chartData.reduce((acc, d) => acc + d.productive, 0);
-    const waste = chartData.reduce((acc, d) => acc + d.unproductive, 0);
-    const health = prod === 0 && waste === 0 ? 0 : (prod / (prod + waste)) * 100;
-    return { prod, waste, health };
-  }, [chartData]);
+    const totalFocus = volumeData.reduce((acc, d) => acc + d.productive, 0);
+    const totalWaste = volumeData.reduce((acc, d) => acc + d.unproductive, 0);
+    const health = (totalFocus + totalWaste) === 0 ? 0 : (totalFocus / (totalFocus + totalWaste)) * 100;
+    const avgQuality = qualityData.length > 0 ? qualityData.reduce((acc, d) => acc + d.quality, 0) / qualityData.length : 0;
+    return { totalFocus, totalWaste, health, avgQuality };
+  }, [volumeData, qualityData]);
 
   return (
-    <div id="telemetry" className="py-40 px-4 bg-zinc-1000">
+    <div id="telemetry" className="py-24 md:py-40 px-6 bg-black">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-24">
-          <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-[0.5em] mb-4 block">Focus Data</span>
-          <h2 className="text-4xl font-bold text-white tracking-tighter">Weekly Stats</h2>
+        <div className="mb-16 md:mb-24">
+          <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-[0.5em] mb-4 block">Activity Stats</span>
+          <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter uppercase italic">Weekly<br /><span className="text-zinc-800 not-italic">Review</span></h2>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-px bg-zinc-900 border border-zinc-900 rounded-lg overflow-hidden">
-          <div className="lg:col-span-3 bg-zinc-1000 p-12 h-[500px]">
-            <div className="flex justify-between items-center mb-12">
-              <h3 className="text-xs font-mono font-bold text-zinc-600 uppercase tracking-widest">Focus Chart</h3>
-              <div className="flex gap-8">
-                <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> Focus
-                </div>
-                <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-400 uppercase tracking-widest">
-                  <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div> Distractions
-                </div>
-              </div>
+        {/* Global Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-zinc-950/50 border border-zinc-900 p-8 rounded-2xl">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 block">Focus Score</span>
+            <div className="text-5xl font-black text-emerald-400 tracking-tighter">{Math.round(stats.health)}%</div>
+            <p className="text-[10px] font-mono text-zinc-600 mt-4 uppercase italic">Efficiency Ratio</p>
+          </div>
+          <div className="bg-zinc-950/50 border border-zinc-900 p-8 rounded-2xl">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 block">Peak Focus</span>
+            <div className="text-5xl font-black text-white tracking-tighter">
+              {Math.max(...volumeData.map(d => d.productive))}<span className="text-emerald-900 text-xl ml-2 font-mono">HRS</span>
             </div>
+            <p className="text-[10px] font-mono text-zinc-600 mt-4 uppercase italic">Best Day</p>
+          </div>
+          <div className="bg-zinc-950/50 border border-zinc-900 p-8 rounded-2xl">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-4 block">Average Rating</span>
+            <div className="text-5xl font-black text-emerald-500 tracking-tighter">
+              {stats.avgQuality.toFixed(1)}
+            </div>
+            <p className="text-[10px] font-mono text-zinc-600 mt-4 uppercase italic">Focus Quality</p>
+          </div>
+        </div>
+
+        {/* Chart Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          {/* 1. Daily Work Volume */}
+          <div className="lg:col-span-8 bg-zinc-950/50 border border-zinc-900 p-8 rounded-2xl h-[450px]">
+            <h3 className="text-xs font-mono font-bold text-white uppercase tracking-widest mb-10 border-l-2 border-emerald-500 pl-4">Focus Hours</h3>
             <ResponsiveContainer width="100%" height="80%">
-              <AreaChart data={chartData}>
+              <AreaChart data={volumeData}>
                 <defs>
-                  <linearGradient id="waveform" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                  <linearGradient id="pGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#111" vertical={false} />
-                <XAxis dataKey="name" stroke="#333" fontSize={10} fontFamily="JetBrains Mono" tickLine={false} axisLine={false} />
-                <YAxis stroke="#333" fontSize={10} fontFamily="JetBrains Mono" tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#000', border: '1px solid #222', borderRadius: '4px', fontSize: '10px', fontFamily: 'JetBrains Mono' }}
-                  cursor={{ stroke: '#333' }}
-                />
-                <Area type="stepAfter" dataKey="productive" stroke="#10b981" fill="url(#waveform)" strokeWidth={2} />
-                <Area type="stepAfter" dataKey="unproductive" stroke="#f43f5e" fill="transparent" strokeWidth={1} strokeDasharray="5 5" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                <XAxis dataKey="name" stroke="#888" fontSize={10} fontFamily="JetBrains Mono" axisLine={false} tickLine={false} />
+                <YAxis stroke="#888" fontSize={10} fontFamily="JetBrains Mono" axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '8px', fontSize: '10px' }} />
+                <Area type="monotone" dataKey="productive" stroke="#10b981" fill="url(#pGrad)" strokeWidth={3} />
+                <Area type="monotone" dataKey="unproductive" stroke="#f43f5e" fill="transparent" strokeWidth={2} strokeDasharray="5 5" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-zinc-950 p-12 flex flex-col justify-between">
-            <div>
-              <span className="text-[10px] font-mono text-zinc-700 uppercase tracking-widest mb-4 block">Total</span>
-              <div className="text-5xl font-black text-white tracking-tighter mb-2">
-                {stats.prod}<span className="text-zinc-800 text-2xl">H</span>
-              </div>
-              <p className="text-zinc-600 text-xs font-mono uppercase">Productive Hours</p>
-            </div>
-
-            <div className="pt-12 border-t border-zinc-900">
-              <span className="text-[10px] font-mono text-zinc-700 uppercase tracking-widest mb-4 block">Health Score</span>
-              <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 transition-all duration-1000"
-                  style={{ width: `${stats.health}%` }}
-                ></div>
-              </div>
+          {/* 2. Composition */}
+          <div className="lg:col-span-4 bg-zinc-950/50 border border-zinc-900 p-8 rounded-2xl h-[450px]">
+            <h3 className="text-xs font-mono font-bold text-white uppercase tracking-widest mb-10 border-l-2 border-indigo-500 pl-4">Activity Mix</h3>
+            <ResponsiveContainer width="100%" height="80%">
+              <PieChart>
+                <Pie data={compositionData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {compositionData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', fontSize: '10px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex flex-wrap justify-center gap-4 mt-4">
+              {compositionData.map(d => (
+                <div key={d.name} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-tighter">{d.name}: {d.value}H</span>
+                </div>
+              ))}
             </div>
           </div>
+
+          {/* 3. Circadian Rhythm (Peak Hours) */}
+          <div className="lg:col-span-12 bg-zinc-950/50 border border-zinc-900 p-8 rounded-2xl h-[400px]">
+            <div className="flex justify-between items-center mb-10">
+              <h3 className="text-xs font-mono font-bold text-white uppercase tracking-widest border-l-2 border-white pl-4">Most Active Hours</h3>
+            </div>
+            <ResponsiveContainer width="100%" height="75%">
+              <BarChart data={hourlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                <XAxis dataKey="hour" stroke="#888" fontSize={8} fontFamily="JetBrains Mono" axisLine={false} tickLine={false} />
+                <YAxis stroke="#888" fontSize={10} fontFamily="JetBrains Mono" axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', fontSize: '10px' }} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <p className="text-center text-[9px] font-mono text-zinc-500 uppercase tracking-[0.3em] mt-6">Productive intervals throughout the day</p>
+          </div>
+
+          {/* 4. Focus Quality Index */}
+          <div className="lg:col-span-12 bg-zinc-950/50 border border-zinc-900 p-8 rounded-2xl h-[400px]">
+            <h3 className="text-xs font-mono font-bold text-white uppercase tracking-widest mb-10 border-l-2 border-emerald-300 pl-4">Daily Focus Quality</h3>
+            <ResponsiveContainer width="100%" height="75%">
+              <BarChart data={qualityData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                <XAxis dataKey="name" stroke="#888" fontSize={10} fontFamily="JetBrains Mono" axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 5]} stroke="#888" fontSize={10} fontFamily="JetBrains Mono" axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: '#000', border: '1px solid #333', fontSize: '10px' }} />
+                <Bar dataKey="quality" fill="#34d399" radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+            <p className="text-center text-[9px] font-mono text-zinc-500 uppercase tracking-[0.3em] mt-6">Average rating per day</p>
+          </div>
+
         </div>
       </div>
     </div>

@@ -14,9 +14,10 @@ interface ChronosGridProps {
   data: WeeklyData;
   currentWeekDates: string[];
   onChange: (date: string, hour: number, slot: TimeSlot) => void;
+  today: string;
 }
 
-const ChronosGrid: React.FC<ChronosGridProps> = ({ data, currentWeekDates, onChange }) => {
+const ChronosGrid: React.FC<ChronosGridProps> = ({ data, currentWeekDates, onChange, today }) => {
   const [isDrawMode, setIsDrawMode] = useState(false);
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
@@ -84,7 +85,7 @@ const ChronosGrid: React.FC<ChronosGridProps> = ({ data, currentWeekDates, onCha
         <div className={`overflow-x-auto no-scrollbar ${isDrawMode ? 'touch-none' : 'touch-pan-x'}`}>
           <div className="min-w-[1100px]">
             {/* Header */}
-            <GridHeader dayLabels={dayLabels} />
+            <GridHeader dayLabels={dayLabels} today={today} />
 
             {/* Rows */}
             {HOURS.map(hour => (

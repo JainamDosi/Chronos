@@ -19,6 +19,16 @@ export default function Home() {
   const [data, setData] = useState<WeeklyData>({});
   const [isLoaded, setIsLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [today, setToday] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Keep 'today' updated in case the app is left open past midnight
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const current = new Date().toISOString().split('T')[0];
+      if (current !== today) setToday(current);
+    }, 60000); // Check every minute
+    return () => clearInterval(timer);
+  }, [today]);
 
   useEffect(() => {
     setMounted(true);
@@ -152,11 +162,21 @@ export default function Home() {
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
                 </button>
-                <div className="text-center min-w-[180px]">
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block mb-0.5">Week Of</span>
-                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">
-                    {currentWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
+                <div className="flex flex-col items-center">
+                  <div className="text-center min-w-[200px]">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block mb-0.5">Week Of</span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-emerald-500 flex items-center justify-center gap-2">
+                      {currentWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {currentWeekDates.includes(today) && (
+                        <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30 animate-pulse">LIVE</span>
+                      )}
+                    </span>
+                  </div>
+                  {currentWeekDates.includes(today) && (
+                    <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-tighter mt-2">
+                      Today: {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={() => navigateWeek(1)}
@@ -174,7 +194,7 @@ export default function Home() {
               </button>
             </div>
 
-            <ChronosGrid data={data} currentWeekDates={currentWeekDates} onChange={handleSlotChange} />
+            <ChronosGrid data={data} currentWeekDates={currentWeekDates} onChange={handleSlotChange} today={today} />
             <AnalyticsDashboard data={data} currentWeekDates={currentWeekDates} />
             <AIInsights data={data} currentWeekDates={currentWeekDates} />
           </div>
